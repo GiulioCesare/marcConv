@@ -1,0 +1,8 @@
+.project
+.cproject
+.settings
+Makefile.htm
+CVS/
+marcConv
+*.d
+*.o
