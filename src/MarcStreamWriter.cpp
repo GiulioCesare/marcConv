@@ -5,10 +5,18 @@
  *      Author: Arge
  */
 
-#include "MarcStreamWriter.h"
-#include "MarcRecord.h"
-#include "MarcConstants.h"
-#include "MarcGlobals.h"
+#include <ControlField.h>
+#include <DataField.h>
+#include <library/tvvector.h>
+#include <Leader.h>
+#include <MarcConstants.h>
+#include <MarcGlobals.h>
+#include <MarcStreamWriter.h>
+#include <Subfield.h>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+
 #ifdef TRACK_MEMORY_LEAKS
     #include "nvwa/debug_new.h"
 #endif
@@ -99,110 +107,11 @@ void MarcStreamWriter::setConverter(CharConverter converter) {
  */
 bool MarcStreamWriter::write(MarcRecord* marcRecord) {
 	bool retb;
-//    long previous = 0;
-//    ControlField *cf;
-//    DataField *df; //, *df1
-//    recordData->Reset();
-//    directoryData->Reset();
-//    CString dataElement; // entry,
-//    CString directoryEntry;
-//    char chr;
-//
-//        // Prepare CONTROL FIELDS
-//        ATTValVector <ControlField*> *controlFields = marcRecord->getControlFieldsVector();
-//        for (int i=0;i< controlFields->Length(); i++ )
-//        {
-//			cf = controlFields->Entry(i);
-//			recordData->AddString(cf->getData());
-//			recordData->AddChar(FIELD_TERMINATOR);
-//
-//			getEntry(cf->getTag(), (recordData->GetUsedBytes())- previous, previous, directoryEntry);
-//			directoryData->AddString(directoryEntry.Data());
-//			previous = recordData->GetUsedBytes();
-//        }
-//
-//
-//        // Prepare DATA FIELDS
-//
-//        ATTValVector <DataField*> *dataFields = marcRecord->getDataFieldsVector();
-//        for (int i=0;i< dataFields->Length(); i++ )
-//        {
-//        	fieldData->Reset();
-//
-//			df = dataFields->Entry(i);
-//			if (!df)
-//				continue;
-//			fieldData->AddChar(df->getIndicator1());
-//			fieldData->AddChar(df->getIndicator2());
-//
-//
-//
-//			// Get SUBFIELDS
-//            ATTValVector <Subfield*> *subfields =  df->getSubfields();
-//            for (int j=0;j< subfields->Length(); j++ )
-//            {
-//                Subfield *sf = subfields->Entry(j);
-//                getDataElement(sf->getData(), dataElement);
-//				if (dataElement.Length() > 9999)
-//				{
-//					//printf ("\nCAMPO Troppo lungo (verra' escluso ESCLUSO) per aver superato max len di 9.999 bytes: Field %s, BID=%s, length=%ld", df->getTag(), controlFields->Entry(0)->getData(), dataElement.Length());
-//					printf ("\nSUBFIELD Troppo lungo (viene troncato a max len di 9.999 bytes: Field %s, BID=%s, length=%ld", df->getTag(), controlFields->Entry(0)->getData(), dataElement.Length());
-//					dataElement.Resize(9999); // 29/01/2010 12.33
-//					// continue;
-//				}
-//   				if (fieldData->GetUsedBytes()+dataElement.Length() > 9990)
-//				{
-//					printf ("\nFIELD TRONCATO per aver superato max len di 9999 bytes: Field %s, BID=%s, length=%ld", df->getTag(), controlFields->Entry(0)->getData(), recordData->GetUsedBytes()+dataElement.Length());
-//					break;
-//				}
-//                fieldData->AddChar(SUBFIELD_DELIMITER);
-//                fieldData->AddChar(sf->getCode());
-//				fieldData->AddBinaryData((OrsUChar*)dataElement.data(), dataElement.Length());
-//            } // End for subfields
-//            fieldData->AddChar(FIELD_TERMINATOR);
-//
-//			// Stiamo sforando?
-//            getEntry(df->getTag(), recordData->GetUsedBytes()+fieldData->GetUsedBytes() - previous, previous, directoryEntry);
-//			if ((directoryEntry.Length() % 12) != 0)
-//			{
-//				cf = controlFields->Entry(0);
-//				printf ("\nRECORD TROPPO LUNGO. VIENE TRONCATO. SKIP OTHER RECORD FIELDS: invalid directory length: %ld instead of 12: Field %s, Record %s", directoryEntry.Length(), df->getTag(), cf->getData());
-//				// return false;
-//				break; // 29/01/2010 12.28 Scriviamo comunque un record parziale
-//			}
-//
-//            // Aggiungiamo il campo al record
-//            recordData->AddBinaryData((OrsUChar*)fieldData->Data(), fieldData->GetUsedBytes());
-//
-//            // Ricalcoliamo la directory entry
-//            getEntry(df->getTag(), recordData->GetUsedBytes() - previous, previous, directoryEntry);
-//
-//			directoryData->AddString(directoryEntry.Data());
-//			previous = recordData->GetUsedBytes();
-//
-//
-//        } // End for datafields
-//        directoryData->AddChar(FIELD_TERMINATOR);
-//
-//
-//        // Prepare il LEADER
-//        Leader *ldr = marcRecord->getLeader();
-//        ldr->setBaseAddressOfData(24 + directoryData->GetUsedBytes());
-//        ldr->setRecordLength(ldr->getBaseAddressOfData() + recordData->GetUsedBytes() + 1);
-//        ldrStr = ldr->getLeader();
 
 
         retb = prepareRecordTowrite(marcRecord);
         if (!retb)
         	return retb;
-
-
-//        //write(ldr);
-//        out->Write(ldrStr->data(), ldrStr->Length());
-//        out->Write(directoryData->Data(), directoryData->GetUsedBytes());
-//        out->Write(recordData->Data(), recordData->GetUsedBytes());
-//        chr = RECORD_TERMINATOR;
-//        out->Write(chr);
 
         return writeToFile();
 } // End write
@@ -410,3 +319,84 @@ bool MarcStreamWriter::writeToFile() {
 
     return retb;
 }
+
+
+/**
+ * Writes a <code>Record</code> object to the writer.
+ *
+ * @param record -
+ *            the <code>Record</code> object
+ */
+bool MarcStreamWriter::writeStructure(MarcRecord* marcRecord) {
+	bool retb;
+
+        retb = prepareRecordTowrite(marcRecord);
+        if (!retb)
+        	return retb;
+
+        //return writeToFile();
+
+
+        Leader *ldr = marcRecord->getLeader();
+        if (ldr->getRecordLength() > 99999)
+    	{
+    		fprintf (stderr, "\nRecord troppo lungo %d. Scartato!!", ldr->getRecordLength());
+    		return false;
+    	}
+
+        printf ("\n\n%s",ldr->toString());
+
+
+        ATTValVector <ControlField*> *controlFields = marcRecord->getControlFieldsVector();
+        for (int i=0;i< controlFields->Length(); i++ )
+        {
+			ControlField *cf = controlFields->Entry(i);
+			if (strcmp ((const char *)cf->getTag(), (const char *)"001") == 0 )
+			{
+				printf ("\n%s %s", cf->getTag(), cf->getData()->Data());
+				break;
+			}
+
+        }
+
+
+
+
+//        int leaderLength = 24;
+        int directoryLength = directoryData->GetUsedBytes()-1;
+        CString *directory = new CString (directoryData->Data(), directoryLength);
+
+//        Directory entries (12 bytes per entry), ......
+//        [-][--][---]-
+//        |  |   |    |
+//        |  |   |    F/T = Field Terminator
+//        |  |   Posizione del primo carattere del campo(iniziando da 0)
+//        |  Length of field
+//        Etichetta
+
+//        printf ("\n%s",directory->Data());
+
+        int pos=0;
+    	CString tag, fieldLength, fieldPos;
+    	printf("\n  TAG R.POS A.POS A.POS LENGTH");
+        while (pos < directoryLength)
+        {
+        	tag = directory->SubstringData(pos, 3);
+        	pos+=3;
+        	fieldLength = directory->SubstringData(pos, 4);
+        	pos+=4;
+        	fieldPos = directory->SubstringData(pos, 5);
+        	pos+=5;
+
+
+        	long absolutePos = ldr->getBaseAddressOfData() + atol(fieldPos.data());
+
+        	printf("\n  %s %s %0.5ld %0.5x %s", tag.data(), fieldPos.data(), absolutePos, absolutePos, fieldLength.Data());
+
+        }
+
+        delete directory;
+
+        return true;
+} // End writeStructure
+

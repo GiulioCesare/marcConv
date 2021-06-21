@@ -51,6 +51,7 @@ CString mrkString;
 long convert_from;
 long convert_to; // 0 = all
 bool noConvert;
+bool dumpStructure = false;
 
 
 CString readFowardString;
@@ -661,9 +662,9 @@ FILE * out = stdout;
 CFile *cFileOut;
 
 MarcStreamReader *marcStreamReader = new MarcStreamReader(in);
-MarcStreamWriter *marcStreamWriter;
+MarcStreamWriter *marcStreamWriter = NULL;
 
-if (noConvert)
+if (noConvert || dumpStructure)
 {
 	cFileOut = new CFile("stdout", out);
 	marcStreamWriter = new MarcStreamWriter(cFileOut);
@@ -687,14 +688,26 @@ while (marcStreamReader->hasNext()) {
 		{
 
 		// Convertiamo o scriviamo come lo abbiamo letto
+
+
 		if (noConvert)
 		{ // keep as is
 			marcStreamWriter->write(marcRecord);
 		}
 		else
 		{
-			sPtr = mrcRecordToMrk(marcRecord);
-			printf("%s\n\n", sPtr->Data());
+
+			if (dumpStructure)
+			{
+
+				marcStreamWriter->writeStructure(marcRecord);
+
+			}
+			else
+			{
+				sPtr = mrcRecordToMrk(marcRecord);
+				printf("%s\n\n", sPtr->Data());
+			}
 		}
 		//printf ("\nRecord %d, bid=%s", ctr, marcRecord->getControlFieldsVector()->Entry(0)->getData()->data());
 		}
@@ -711,7 +724,7 @@ while (marcStreamReader->hasNext()) {
 
 delete in;
 delete marcStreamReader;
-if (noConvert)
+if (noConvert || dumpStructure)
 {
 	delete cFileOut;
 	delete marcStreamWriter;
@@ -757,8 +770,11 @@ void convertMrk2Mrc(char *filename)
 		{
 			// Do conversion to MRC
 			buildMarcRecord(mrkRecordVector, marcRecord);
-			marcStreamWriter->write(marcRecord);
-//break;
+
+			if (dumpStructure)
+				marcStreamWriter->writeStructure(marcRecord);
+			else
+				marcStreamWriter->write(marcRecord);
 		}
 
 		if (convert_to && read_ctr >= convert_to) // convert_to a 0 = tutti
@@ -784,7 +800,7 @@ int main(int argc, const char* argv[]) {
 	{
 
 		//		printf ("USO: marcConv filename (mrc o mrk) [tagsToextractFilename]\n");
-		printf ("USO: marcConv filename (mrc o mrk) [tags=tagsToextractFilename] [from=nn] [to=nn] [noConvert=true]\n");
+		printf ("USO: marcConv filename (mrc o mrk) [tags=tagsToextractFilename] [from=nn] [to=nn] [noConvert=true] [dumpStructure=true]\n");
 		//printf ("Ver: 2015_03_26 gestione mrc con lf o cr/lf\n");
 		//printf ("Ver: 2015_11_04 gestione extract tags parametrizzato\n");
 //		printf ("Ver: 2017_03_07 gestione extract di range di record form/to con conversione o no\n");
@@ -832,6 +848,8 @@ int main(int argc, const char* argv[]) {
 				}
 				delete ini;
 			}
+			else if (arg.StartsWith("dumpStructure=true"))
+				dumpStructure = true;
 
 		}
 	}
@@ -854,3 +872,4 @@ int main(int argc, const char* argv[]) {
 
 	return 0;
 }
+

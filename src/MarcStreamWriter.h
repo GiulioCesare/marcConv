@@ -38,6 +38,8 @@ public:
 
 	virtual ~MarcStreamWriter();
 	virtual bool write(MarcRecord* marcRecord);
+	virtual bool writeStructure(MarcRecord* marcRecord);
+
 	bool writeToFile();
 	bool prepareRecordTowrite(MarcRecord* marcRecord);
 	long getWriteToFileRecordLength();
