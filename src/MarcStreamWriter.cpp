@@ -211,8 +211,6 @@ bool MarcStreamWriter::prepareRecordTowrite(MarcRecord* marcRecord) {
 			fieldData->AddChar(df->getIndicator1());
 			fieldData->AddChar(df->getIndicator2());
 
-
-
 			// Get SUBFIELDS
             ATTValVector <Subfield*> *subfields =  df->getSubfields();
             for (int j=0;j< subfields->Length(); j++ )
@@ -221,22 +219,40 @@ bool MarcStreamWriter::prepareRecordTowrite(MarcRecord* marcRecord) {
                 //getDataElement(sf->getData(), dataElement);
                 sPtr = sf->getDataString();
 
-				if (sPtr->Length() > 9999)
+				if (sPtr->Length() > 9998)
 				{
 					//printf ("\nCAMPO Troppo lungo (verra' escluso ESCLUSO) per aver superato max len di 9.999 bytes: Field %s, BID=%s, length=%ld", df->getTag(), controlFields->Entry(0)->getData(), dataElement.Length());
-					fprintf (stderr, "\nSUBFIELD Troppo lungo (viene troncato a max len di 9.999 bytes: Field %s, BID=%s, length=%ld", df->getTagString()->data(), controlFields->Entry(0)->getData()->data(), sPtr->Length());
-					sPtr->Resize(9999); // 29/01/2010 12.33
+//					fprintf (stderr, "\nSUBFIELD Troppo lungo (viene troncato a max len di 9.999 bytes: Field %s, BID=%s, length=%ld", df->getTagString()->data(), controlFields->Entry(0)->getData()->data(), sPtr->Length());
+//					sPtr->Resize(9999); // 29/01/2010 12.33
+
+
+					int pos = sPtr->IndexCharFrom(' ', 9998, sPtr->backward);
+					sPtr->CropRightFrom(pos);
+					fprintf(stderr, "Bid %s, SOTTOCAMPO %0.3d troppo lungo. Viene TRONCATO a posizione %d\n", controlFields->Entry(0)->getData()->data(), sf->getId(), pos);
+
+
 					// continue;
 				}
 
-   				if (fieldData->GetUsedBytes()+sPtr->Length() > 9990)
+   				if (fieldData->GetUsedBytes()+sPtr->Length() > 9998)
 				{
-					fprintf (stderr, "\nBID=%s - Field %s:  FIELD TRONCATO per aver superato max len di 9999 bytes,  length=%ld", controlFields->Entry(0)->getData()->data(), df->getTagString()->data(), recordData->GetUsedBytes()+sPtr->Length());
+					fprintf (stderr, "\nBID=%s - Field %s:  FIELD TRONCATO per aver superato max len di 9995 bytes,  length=%ld (sottocamp N.%d)\n",
+							controlFields->Entry(0)->getData()->data(), df->getTagString()->data(), recordData->GetUsedBytes()+sPtr->Length(), j);
+//					int pos = sPtr->IndexCharFrom(' ', 9995, sPtr->backward);
+//					sPtr->CropRightFrom(pos);
+//					fprintf(stderr, "Bid %s, CAMPO %0.3d troppo lungo. Viene TRONCATO a posizione %d\n", controlFields->Entry(0)->getData()->data(), sf->getId(), pos);
 					break;
 				}
 
                 fieldData->AddChar(SUBFIELD_DELIMITER);
                 fieldData->AddChar(sf->getCode());
+//if (df->getId() == 330)
+//	fprintf (stderr, "\n->Tag 330 BEFORE\nData: %s\n", sPtr->data());
+// 14/09/2021
+sPtr->ChangeTo("{dollar}", "$");
+
+//if (df->getId() == 330)
+//	fprintf (stderr, "\n->Tag 330 AFTER\nData: %s\n", sPtr->data());
 
 				fieldData->AddBinaryData(sPtr->data(), sPtr->Length());
 

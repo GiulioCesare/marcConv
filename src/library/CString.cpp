@@ -2425,35 +2425,48 @@ long CString::IndexLastSubStringIgnoreWithin(const char *aSubString, char ignore
 // Change a substring with another substring within the string
 void CString::ChangeTo(OrsChar *aStringFrom, OrsChar *aStringTo)
 	{
-	OrsChar *Ptr = Buffer, *To;
+//	OrsChar *Ptr = Buffer, *To;
+//
+//	int aStringToLen = strlen(aStringTo);
+//	int StartOff =0, EndOff = 0; // , Off=0
+//
+//	while (*Ptr)
+//		{
+//		To = aStringFrom;
+//		EndOff =0;
+//		StartOff = Ptr-Buffer;
+//		while (*To)
+//			{
+//			if	(*Ptr != *To)
+//				break;
+//			EndOff ++;
+//			Ptr++;
+//			To++;
+//			}
+//			if	(!*To)
+//				{
+//				// Found a substring
+//				// Replace it
+//				Replace((OrsLong)StartOff, (OrsLong)EndOff, aStringTo);
+//
+//				Ptr = Buffer + StartOff + aStringToLen;
+//				continue;
+//				}
+//			Ptr++;
+//		}
 
-	int aStringToLen = strlen(aStringTo);
-	int StartOff =0, EndOff = 0; // , Off=0
+	// 14/09/2021 Non efficiente, ma vado di corsa
+	int idx;
+	const char *ptr = aStringFrom;
+	int aStringFromLen=strlen(ptr);
+	while(true)
+	{
+		idx = IndexSubString(ptr);
+		if (idx == -1)
+			break;
+		Replace(idx, aStringFromLen, aStringTo);
+	}
 
-	while (*Ptr)
-		{
-		To = aStringFrom;
-		EndOff =0;
-		StartOff = Ptr-Buffer;
-		while (*To)
-			{
-			if	(*Ptr != *To)
-				break;
-			EndOff ++;
-			Ptr++;
-			To++;
-			}
-		if	(!*To)
-			{
-			// Found a substring
-			// Replace it
-			Replace((OrsLong)StartOff, (OrsLong)EndOff, aStringTo);
-
-			Ptr = Buffer + StartOff + aStringToLen;
-			continue;
-			}
-		Ptr++;
-		}
 	} // CString::ChangeTo
 
 
@@ -2716,6 +2729,7 @@ long CString::IndexCharFrom(char aChar, int from, int direction)
 			if (*ptr == aChar)
 				return pos;
 			pos--;
+			ptr--;
 		}
 	}
 	else

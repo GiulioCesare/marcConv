@@ -151,6 +151,10 @@ bool Subfield::find(char* pattern) {
 char* Subfield::toString() {
     stringed = '$';
     stringed.AppendChar(code);
+
+// 14/09/2021
+data.ChangeTo("$", "{dollar}");
+
     stringed.AppendString(&data);
     return stringed.data();
     }
@@ -160,6 +164,10 @@ CString* Subfield::toCString()
 
     stringed = '$';
     stringed.AppendChar(code);
+
+// 14/09/2021
+data.ChangeTo("$", "{dollar}");
+
     stringed.AppendString(&data);
     return &stringed;
 }
@@ -172,6 +180,9 @@ long Subfield::getToStringLength() {
 
 CString* Subfield::getDataString()
 {
+// 14/09/2021
+data.ChangeTo("$", "{dollar}");
+
 	return &data;
 }
 

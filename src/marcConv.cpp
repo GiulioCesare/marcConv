@@ -211,6 +211,8 @@ CString *mrcRecordToMrk(MarcRecord *marcRecord)
 			printf ("ERRORE: Datafield %d (partendo da 0) non instanziato (datafields=%d)", i, marcRecord->getDataFieldsVector()->Length());
 	}
 
+
+
 	return &mrkString;
 }
 
@@ -265,8 +267,7 @@ CString *mrcRecordToMrk(MarcRecord *marcRecord)
 bool getMrkRecord(CFile *cFile, CKeyValueVector *mrkRecordVector)
 {
 	CString s,sForward;
-	CString key;
-	CString value;
+	CString key, value, bid;
 	bool hasRecord=false;
 
 	// Clear the vector;
@@ -301,15 +302,19 @@ bool getMrkRecord(CFile *cFile, CKeyValueVector *mrkRecordVector)
 		key = s.SubstringData(1,3);
 		value = s.SubstringData(6);
 
+		if (key.isEqual("001"))
+			bid.assign(&value);
+
 		while (true)
 		{
 			s.Clear();
 			if (!s.ReadLine(cFile) || cFile->Eof())
 			{
-				if (value.Length() > 9990)
+				if (value.Length() > 9995)
 				{
-					fprintf(stderr, "Campo %s troppo lungo. Viene TRONCATO\n", key.data());
-					value.CropRightFrom(9990);
+					int pos = value.IndexCharFrom(' ', 9995, value.backward);
+					value.CropRightFrom(pos);
+					fprintf(stderr, "Bid %s, campo %s troppo lungo. Viene TRONCATO a posizione %d\n", bid.data(), key.data(), pos);
 				}
 				mrkRecordVector->Add(key.data(), value.data());
 				return hasRecord;
@@ -336,10 +341,11 @@ bool getMrkRecord(CFile *cFile, CKeyValueVector *mrkRecordVector)
 				{
 					value.ExtractLastChar(); // get rid of /n
 
-					if (value.Length() > 9990)
+					if (value.Length() > 9995)
 					{
-						fprintf(stderr, "Campo %s troppo lungo. Viene TRONCATO\n", key.data());
-						value.CropRightFrom(9990);
+						int pos = value.IndexCharFrom(' ', 9995, value.backward);
+						fprintf(stderr, "Bid %s, campo %s troppo lungo. Viene TRONCATO a posizione %d\n", bid.data(), key.data(), pos);
+						value.CropRightFrom(pos);
 					}
 					mrkRecordVector->Add(key.data(), value.data());
 					readFowardString.assign(&s);
@@ -372,10 +378,13 @@ bool getMrkRecord(CFile *cFile, CKeyValueVector *mrkRecordVector)
 
 		} // End while
 
-		if (value.Length() > 9990)
+		if (value.Length() > 9995)
 		{
-			fprintf(stderr, "Campo %s troppo lungo. Viene TRONCATO\n", key.data());
-			value.CropRightFrom(9990);
+			int pos = value.IndexCharFrom(' ', 9995, value.backward);
+			fprintf(stderr, "Bid %s, campo %s troppo lungo. Viene TRONCATO a posizione %d\n", bid.data(), key.data(), pos);
+			value.CropRightFrom(pos);
+			value.AppendString("...");
+//fprintf(stderr, "value len=%d", value.Length());
 		}
 		mrkRecordVector->Add(key.data(), value.data());
 		ctr++;
@@ -384,7 +393,7 @@ bool getMrkRecord(CFile *cFile, CKeyValueVector *mrkRecordVector)
 	} // end while reading
 	return hasRecord;
 
-}
+} // end getMrkRecord
 
 
 
@@ -469,6 +478,8 @@ void buildMarcRecord(CKeyValueVector *mrkRecordVector, MarcRecord *marcRecord)
 
 			mrkValue.Split(subfields, '$');	// Suddividiamo i sottocampi
 //			dumpMrkSubfields(mrkKey.data(), &subfields);
+//			mrkValue.Split(subfields, 01);	// Suddividiamo i sottocampi
+
 
 			// Create the datafield
 			df = new DataField(mrkKey.data(), indicator1, indicator2);
@@ -792,9 +803,23 @@ void convertMrk2Mrc(char *filename)
 	delete marcStreamWriter;
 } // End convertMrk2Mrc
 
+void test_changeTo()
+{
+	CString s = "h{{dollar}k{dollar}-critical cells}";
+
+	fprintf (stderr, "\n->Tag 330 BEFORE\nData: %s\n", s.data());
+	s.ChangeTo("{dollar}", "$");
+	fprintf (stderr, "\n->Tag 330 AFTER\nData: %s\n", s.data());
+
+}
+
+
+
 int main(int argc, const char* argv[]) {
 	setvbuf(stdout, NULL, _IONBF, 0);
 
+//test_changeTo();
+//exit(1);
 
 	if (argc < 2)
 	{
@@ -805,9 +830,12 @@ int main(int argc, const char* argv[]) {
 		//printf ("Ver: 2015_11_04 gestione extract tags parametrizzato\n");
 //		printf ("Ver: 2017_03_07 gestione extract di range di record form/to con conversione o no\n");
 //		printf ("Ver: 2019_09_19 gestione extract di range di record form/to con conversione o no\n");
-		printf ("Ver: 2019_10_24 15:50\n"); // gestione gestione mrk con tag su piu' righe, anche vuote
-										// Troncamento campi troppo lunghi a 9990
+//		printf ("Ver: 2019_10_24 15:50\n"); // gestione gestione mrk con tag su piu' righe, anche vuote
+										// Troncamento campi troppo lunghi a 9995 (primo spazio a sinistra)
 										// Errori e Warning su stderr
+//		printf ("Ver: 2021_09_13 16:18\n"); // Fix troncamento campo troppo lungo e migliorato report
+
+		printf ("Ver: 2021_09_14 11:21\n"); // Gestione {dollar} nel testo dei sottocampi del .mrk per distinguerlo dal marcatore in chiaro del sottocampo: '$'
 		exit (1);
 	}
 
@@ -872,4 +900,5 @@ int main(int argc, const char* argv[]) {
 
 	return 0;
 }
+
 
